@@ -36,5 +36,12 @@
         // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
       });
     </script>
+    <script>
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault(); // 브라우저 기본 Enter 동작 막기
+        }
+      }, true); // 캡처링 단계에서 막기
+    </script>
   </body>
 </html>
