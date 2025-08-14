@@ -1,40 +1,120 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en-us">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Unity WebGL Player | WebGLTest</title>
   </head>
-  <body style="text-align: center; padding: 0; border: 0; margin: 0;">
-    <canvas id="unity-canvas" width=1280 height=720 tabindex="-1" style="width: 1280px; height: 720px; background: #FFB780"></canvas>
-    <script src="Build/WebGLTest_Build.loader.js"></script>
+  <script></script>
+  <body style="text-align: center; padding: 0; border: 0; margin: 0">
+    <canvas
+      id="unity-canvas"
+      width="1280"
+      height="720"
+      tabindex="-1"
+      style="width: 1280px; height: 720px; background: #ffb780"
+    ></canvas>
+    <script src="Build/unity.loader.js"></script>
     <script>
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         // Mobile device style: fill the whole browser client area with the game canvas:
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
+        var meta = document.createElement('meta')
+        meta.name = 'viewport'
+        meta.content =
+          'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes'
+        document.getElementsByTagName('head')[0].appendChild(meta)
 
-        var canvas = document.querySelector("#unity-canvas");
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.style.position = "fixed";
+        var canvas = document.querySelector('#unity-canvas')
+        canvas.style.width = '100%'
+        canvas.style.height = '100%'
+        canvas.style.position = 'fixed'
 
-        document.body.style.textAlign = "left";
+        document.body.style.textAlign = 'left'
       }
 
-      createUnityInstance(document.querySelector("#unity-canvas"), {
-        dataUrl: "Build/WebGLTest_Build.data",
-        frameworkUrl: "Build/WebGLTest_Build.framework.js",
-        codeUrl: "Build/WebGLTest_Build.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "WebGLTest",
-        productVersion: "1.0",
+      window.addEventListener('message', function (event) {
+        try{
+
+          if(typeof unityInstance !== 'undefined'){
+            const data = JSON.parse(event.data);
+
+            console.log("Vue → Unity 메시지 수신: ", data);
+            
+            const messageHandlers = {
+              "video-frame": () => {
+                if(data.sender === "local"){
+                  unityInstance.SendMessage("VueReceiver", "ReceiveLocalVideoFrame", data.data);
+                }
+                else if(data.sender === "remote"){
+                  unityInstance.SendMessage("VueReceiver", "ReceiveRemoteVideoFrame", data.data);
+                }
+              },
+              "local-user-info": () => {
+                unityInstance.SendMessage("VueReceiver", "ReceiveLocalUserInfo", data.data);
+                console.log("Vue → Unity 유저 정보 전송: ", data.data);
+              },
+              "room-list": () => {
+                unityInstance.SendMessage("VueReceiver", "ReceiveRoomList", data.data);
+                console.log("Vue → Unity 방 정보 전송: ", data.data);
+              },
+              "room-created": () => {
+                unityInstance.SendMessage("VueReceiver", "ReceiveCreatedRoomInfo", data.data);
+                console.log("Vue → Unity 방 생성 전송: ", data.data);
+              },
+              "join-room": () => {
+                unityInstance.SendMessage("VueReceiver", "ReceiveJoinRoom", data.data);
+                console.log("Vue → Unity 방 입장 전송: ", data.data);
+              },
+              "ready-answer": () => {
+                unityInstance.SendMessage("VueReceiver", "ReceiveReadyAnswer", data.data);
+                console.log("Vue → Unity 게임 준비: ", data.data);
+              },
+              "error": () => {
+                unityInstance.SendMessage("VueReceiver", "ReceiveError", data.data);
+                console.log("Vue → Unity 에러 전송: ", data.data);
+              }
+            };
+            
+            if (messageHandlers[data.type]) {
+              messageHandlers[data.type]();
+            }
+          }
+        }
+        catch(e){
+          console.warn("메시지 전송 실패: ", e);
+        }
+        // console.log('📨 Vue → Unity 메시지 수신:', event.data)
+        
+        // if (typeof unityInstance !== 'undefined') {
+        //   //console.log("📨 Vue → Unity 메시지 수신:", event.data);
+        //   unityInstance.SendMessage('VueReceiver', 'ReceiveFromVue', event.data)
+        // }
+      })
+
+      // Unity가 Vue로 메시지 보낼 때 호출할 함수
+      window.SendToVue = function (msg) {
+        console.log("Unity → Vue 메시지 전송: ", msg);
+        parent.postMessage(msg, '*')
+      }
+
+      createUnityInstance(document.querySelector('#unity-canvas'), {
+        dataUrl: 'Build/unity.data',
+        frameworkUrl: 'Build/unity.framework.js',
+        codeUrl: 'Build/unity.wasm',
+        streamingAssetsUrl: 'StreamingAssets',
+        companyName: 'DefaultCompany',
+        productName: 'WebGLTest',
+        productVersion: '1.0',
         // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
         // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
-      });
+      })
+        .then(function (instance) {
+          unityInstance = instance
+          parent.postMessage(JSON.stringify({ type: 'unity-ready' }), '*')
+        })
+        .catch(function (message) {
+          alert(message)
+        })
     </script>
   </body>
 </html>
